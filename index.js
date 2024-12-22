@@ -17,6 +17,21 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+// verify cookie token
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    req.user = decoded;
+  });
+
+  next();
+};
 
 const uri = `mongodb+srv://${process.env.DB_user}:${process.env.DB_password}@cluster0.p5jac.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -31,22 +46,6 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const roomsCollection = client.db("HotelDB").collection("rooms");
-
-    // verify cookie token
-    const verifyToken = (req, res, next) => {
-      const token = req.cookies?.token;
-      if (!token) {
-        return res.status(401).send({ message: "unauthorized access" });
-      }
-      jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-        if (err) {
-          return res.status(401).send({ message: "unauthorized access" });
-        }
-        req.user = decoded;
-      });
-
-      next();
-    };
 
     //  generate jwt token
     app.post("/jwt", async (req, res) => {
@@ -75,14 +74,20 @@ async function run() {
 
     //  rooms data get
     app.get("/rooms", async (req, res) => {
-     const skip = parseInt(req.query.skip) || 1;
-    const limit = parseInt(req.query.limit) || 8;
-      const result = await roomsCollection.find({})
+      const skip = parseInt(req.query.skip) || 1;
+      const limit = parseInt(req.query.limit) || 8;
+      const sort = req.query.sort;
+      const sortOption = sort ? { price: sort === "asc" ? 1 : -1 } : {};
+      const result = await roomsCollection
+        .find({})
+        .sort(sortOption)
         .skip((skip - 1) * limit)
         .limit(limit)
-      .toArray();
+        .toArray();
+
       res.send(result);
     });
+
     // total rooms count
     app.get("/rooms_count", async (req, res) => {
       const count = await roomsCollection.estimatedDocumentCount();
