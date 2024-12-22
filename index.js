@@ -36,15 +36,11 @@ async function run() {
     const verifyToken = (req, res, next) => {
       const token = req.cookies?.token;
       if (!token) {
-        return res
-          .status(401)
-          .send({  message: "unauthorized access" });
+        return res.status(401).send({ message: "unauthorized access" });
       }
       jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
         if (err) {
-          return res
-            .status(401)
-            .send({ message: "unauthorized access" });
+          return res.status(401).send({ message: "unauthorized access" });
         }
         req.user = decoded;
       });
@@ -79,9 +75,20 @@ async function run() {
 
     //  rooms data get
     app.get("/rooms", async (req, res) => {
-      const result = await roomsCollection.find({}).toArray();
+     const skip = parseInt(req.query.skip) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+      const result = await roomsCollection.find({})
+        .skip((skip - 1) * limit)
+        .limit(limit)
+      .toArray();
       res.send(result);
     });
+    // total rooms count
+    app.get("/rooms_count", async (req, res) => {
+      const count = await roomsCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+
     // await client.connect();
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
