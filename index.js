@@ -28,9 +28,8 @@ const verifyToken = (req, res, next) => {
       return res.status(401).send({ message: "unauthorized access" });
     }
     req.user = decoded;
+    next();
   });
-
-  next();
 };
 
 const uri = `mongodb+srv://${process.env.DB_user}:${process.env.DB_password}@cluster0.p5jac.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -100,7 +99,7 @@ async function run() {
     });
 
     // room data get by id
-    app.get("/room_details/:id", async (req, res) => {
+    app.get("/room_details/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await roomsCollection.findOne(query);
@@ -108,7 +107,7 @@ async function run() {
     });
 
     // BOOKING room
-    app.post("/book_room", async (req, res) => {
+    app.post("/book_room",verifyToken, async (req, res) => {
       const bookrooms = req.body;
 
       const query = {
@@ -122,7 +121,7 @@ async function run() {
 
       const result = await bookroomsCollection.insertOne(bookrooms);
 
-      // Update troom available
+      // Update room unavailable
       const roomQuery = { _id: new ObjectId(bookrooms.roomId) };
       const updateQuery = {
         $set: { available: false },
@@ -136,6 +135,38 @@ async function run() {
         return res.status(500).send("Failed to update room availability.");
       }
 
+      res.send(result);
+    });
+
+    // cancel booking
+    app.delete("/cancel_booking",verifyToken, async (req, res) => {
+      const { id, roomId } = req.query;
+
+      const query = { _id: new ObjectId(id) };
+      const result = await bookroomsCollection.deleteOne(query);
+      // Update room unavailable
+      const roomQuery = { _id: new ObjectId(roomId)};
+      const updateQuery = {
+        $set: { available: true },
+      };
+      const updateAvailable = await roomsCollection.updateOne(
+        roomQuery,
+        updateQuery
+      );
+      if (updateAvailable.modifiedCount === 0) {
+        return res.status(500).send("Failed to update room availability.");
+      }
+      res.send(result);
+    })
+
+    //get booked rooms
+    app.get("/booked_rooms", verifyToken, async (req, res) => {
+      const email = req.query.email;  
+      const query = { userEmail: email };
+      if (req.user.email !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const result = await bookroomsCollection.find(query).toArray();
       res.send(result);
     });
 
