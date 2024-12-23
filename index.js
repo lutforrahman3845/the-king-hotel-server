@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
@@ -45,7 +45,12 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const roomsCollection = client.db("HotelDB").collection("rooms");
+    const roomsCollection = client
+      .db("hotelmanagementdb")
+      .collection("roomsinfo");
+    const bookroomsCollection = client
+      .db("hotelmanagementdb")
+      .collection("bookRoomsinfo");
 
     //  generate jwt token
     app.post("/jwt", async (req, res) => {
@@ -92,6 +97,46 @@ async function run() {
     app.get("/rooms_count", async (req, res) => {
       const count = await roomsCollection.estimatedDocumentCount();
       res.send({ count });
+    });
+
+    // room data get by id
+    app.get("/room_details/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await roomsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // BOOKING room
+    app.post("/book_room", async (req, res) => {
+      const bookrooms = req.body;
+
+      const query = {
+        userEmail: bookrooms.userEmail,
+        roomId: bookrooms.roomId,
+      };
+      const alreadyBooked = await bookroomsCollection.findOne(query);
+      if (alreadyBooked) {
+        return res.status(400).send("You have already booked this room.");
+      }
+
+      const result = await bookroomsCollection.insertOne(bookrooms);
+
+      // Update troom availabe
+      const roomQuery = { _id: new ObjectId(bookrooms.roomId) };
+      const updateQuery = {
+        $set: { available: false },
+      };
+      const updateAvailable = await roomsCollection.updateOne(
+        roomQuery,
+        updateQuery
+      );
+
+      if (updateAvailable.modifiedCount === 0) {
+        return res.status(500).send("Failed to update room availability.");
+      }
+
+      res.send(result);
     });
 
     // await client.connect();
