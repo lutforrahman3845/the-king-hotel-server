@@ -99,7 +99,7 @@ async function run() {
     });
 
     // room data get by id
-    app.get("/room_details/:id",verifyToken, async (req, res) => {
+    app.get("/room_details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await roomsCollection.findOne(query);
@@ -107,7 +107,7 @@ async function run() {
     });
 
     // BOOKING room
-    app.post("/book_room",verifyToken, async (req, res) => {
+    app.post("/book_room", verifyToken, async (req, res) => {
       const bookrooms = req.body;
 
       const query = {
@@ -139,13 +139,13 @@ async function run() {
     });
 
     // cancel booking
-    app.delete("/cancel_booking",verifyToken, async (req, res) => {
+    app.delete("/cancel_booking", verifyToken, async (req, res) => {
       const { id, roomId } = req.query;
 
       const query = { _id: new ObjectId(id) };
       const result = await bookroomsCollection.deleteOne(query);
       // Update room unavailable
-      const roomQuery = { _id: new ObjectId(roomId)};
+      const roomQuery = { _id: new ObjectId(roomId) };
       const updateQuery = {
         $set: { available: true },
       };
@@ -157,16 +157,26 @@ async function run() {
         return res.status(500).send("Failed to update room availability.");
       }
       res.send(result);
-    })
-
+    });
     //get booked rooms
     app.get("/booked_rooms", verifyToken, async (req, res) => {
-      const email = req.query.email;  
+      const email = req.query.email;
       const query = { userEmail: email };
       if (req.user.email !== email) {
         return res.status(403).send({ message: "forbidden access" });
       }
       const result = await bookroomsCollection.find(query).toArray();
+      res.send(result);
+    });
+    // Update room
+    app.patch("/update_booking", verifyToken, async (req, res) => {
+      const { id } = req.query;
+      const update = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateQuery = {
+        $set: update,
+      };
+      const result = await bookroomsCollection.updateOne(query, updateQuery);
       res.send(result);
     });
 
