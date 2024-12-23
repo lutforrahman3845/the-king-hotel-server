@@ -122,7 +122,7 @@ async function run() {
 
       const result = await bookroomsCollection.insertOne(bookrooms);
 
-      // Update troom availabe
+      // Update troom available
       const roomQuery = { _id: new ObjectId(bookrooms.roomId) };
       const updateQuery = {
         $set: { available: false },
