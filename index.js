@@ -50,6 +50,9 @@ async function run() {
     const bookroomsCollection = client
       .db("hotelmanagementdb")
       .collection("bookRoomsinfo");
+    const reviewroomsCollection = client
+      .db("hotelmanagementdb")
+      .collection("reviewsRoomsinfo");
 
     //  generate jwt token
     app.post("/jwt", async (req, res) => {
@@ -177,6 +180,40 @@ async function run() {
         $set: update,
       };
       const result = await bookroomsCollection.updateOne(query, updateQuery);
+      res.send(result);
+    });
+    //  review post
+    app.post("/review", verifyToken, async (req, res) => {
+      const review = req.body;
+      const result = await reviewroomsCollection.insertOne(review);
+      const roomQuery = { _id: new ObjectId(review.roomId) };
+      const room = await roomsCollection.findOne(roomQuery);
+      if (!room) {
+        return res.status(404).send("room not found");
+      }
+      const newTotalReviews = (room.totalReviews || 0) + 1;
+      const newRating =
+        ((room.rating || 0) * (room.totalReviews || 0) + review.rooomRating) /
+        newTotalReviews;
+
+      const updateQuery = {
+        $set: {
+          rating: parseFloat(newRating.toFixed(1)),
+          totalReviews: newTotalReviews,
+        },
+      };
+      const updateRoom = await roomsCollection.updateOne(
+        roomQuery,
+        updateQuery
+      );
+      res.send(result);
+    });
+    // get reviews
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewroomsCollection
+        .find({})
+        .sort({ timestamp: -1 })
+        .toArray();
       res.send(result);
     });
 
