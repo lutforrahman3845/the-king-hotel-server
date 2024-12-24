@@ -216,6 +216,27 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    // get reviews by room id
+    app.get("/reviews_ofRooms", verifyToken, async (req, res) => {
+      const { room } = req.query;
+      const query = { roomId: room };
+      const skip = parseInt(req.query.skip) || 1;
+      const limit = parseInt(req.query.limit) || 4;
+      const result = await reviewroomsCollection
+        .find(query)
+        .sort({ timestamp: -1 })
+        .skip((skip - 1) * limit)
+        .limit(limit)
+        .toArray();
+      res.send(result);
+    });
+    // get reviews count of specific room
+    app.get("/reviews_count", verifyToken, async (req, res) => {
+      const { rm } = req.query;
+      const query = { roomId: rm };
+      const count = await reviewroomsCollection.countDocuments(query);
+      res.send({ count });
+    });
 
     // await client.connect();
     // Send a ping to confirm a successful connection
