@@ -10,7 +10,7 @@ const app = express();
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://the-king-hotel.web.app", "https://the-king-hotel.firebaseapp.com"],
     credentials: true,
     optionsSuccessStatus: 200,
   })
