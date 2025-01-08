@@ -101,7 +101,7 @@ async function run() {
       res.send({ count });
     });
 
-    // room data get by id
+    // room data  by id
     app.get("/room_details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
